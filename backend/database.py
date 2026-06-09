@@ -1,7 +1,5 @@
 """Database engine, session management, and initialization."""
 
-import json
-import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
@@ -37,26 +35,6 @@ def _sql_table(table_name: str) -> str:
     if _is_sqlite():
         return table_name
     return f'"{table_name}"'
-
-
-def _debug_log(message: str, data: dict, hypothesis_id: str) -> None:
-    # #region agent log
-    try:
-        payload = {
-            "sessionId": "9d1bcb",
-            "runId": "migration-fix",
-            "hypothesisId": hypothesis_id,
-            "location": "database.py:migrate_db",
-            "message": message,
-            "data": data,
-            "timestamp": int(time.time() * 1000),
-        }
-        log_path = Path(__file__).resolve().parent.parent / "debug-9d1bcb.log"
-        with log_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(payload) + "\n")
-    except OSError:
-        pass
-    # #endregion
 
 
 def _column_exists(conn, table_name: str, column_name: str) -> bool:
@@ -97,24 +75,7 @@ def migrate_db() -> None:
             if _column_exists(conn, table, column):
                 continue
             sql = f"ALTER TABLE {_sql_table(table)} ADD COLUMN {column} {definition}"
-            # #region agent log
-            _debug_log(
-                "running migration",
-                {"table": table, "column": column, "sql": sql, "dialect": "sqlite" if _is_sqlite() else "postgresql"},
-                "H1",
-            )
-            # #endregion
-            try:
-                conn.execute(text(sql))
-            except Exception as exc:
-                # #region agent log
-                _debug_log(
-                    "migration failed",
-                    {"table": table, "column": column, "sql": sql, "error": type(exc).__name__},
-                    "H1",
-                )
-                # #endregion
-                raise
+            conn.execute(text(sql))
 
 
 def init_db() -> None:
