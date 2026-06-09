@@ -1,0 +1,14 @@
+Firebase Push Notifications Setup
+================================
+
+1. Create a project at https://console.firebase.google.com
+2. Add Android app with package name: com.flighttracker.app
+3. Download google-services.json
+4. Place it at: frontend/android/app/google-services.json
+5. In Firebase → Project settings → Service accounts:
+   - Generate new private key (JSON)
+6. On your cloud server, set FCM_CREDENTIALS_PATH to that JSON file path
+7. Rebuild APK: npm run cap:apk:release
+
+The app requests push permission after sign-in and registers the FCM token
+with POST /api/devices/register (authenticated).

@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+.env
+
+# SQLite database
+*.db
+*.db-journal
+
+# Secrets
+*.pem
+firebase-*.json
+google-services.json
+**/fcm*.json
+
+# Node / Capacitor (Step 7)
+node_modules/
+frontend/android/
+frontend/ios/
+frontend/dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

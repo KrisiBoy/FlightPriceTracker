@@ -1,0 +1,84 @@
+# Flight Price Tracker - Master Plan & Agent Prompt
+
+## 📌 Project Overview
+We are building a modern, ultra-minimalist Flight Price Tracker. The application consists of a high-performance **Python (FastAPI)** backend handling scheduling, data fetching, database storage, and notifications, paired with a clean **HTML/JS (Tailwind CSS)** frontend. 
+The frontend must be architected as a Single Page Application (SPA) compatible with **CapacitorJS** so it can be natively compiled into an **Android APK**.
+
+---
+
+## 🛠 Tech Stack Specification
+- **Backend:** Python 3.11+, FastAPI, Uvicorn.
+- **Database:** SQLite with SQLModel / SQLAlchemy ORM.
+- **Scheduler:** `apscheduler` to fetch prices 3 times a day automatically.
+- **Flight Data API:** Skyscanner (via RapidAPI) or a Scraping/Official Google Flights API (e.g., SerpApi / FlightAPI). Provide a robust *Mock Service* for local testing first.
+- **Notifications:** - **Email:** Ingesting SMTP or Resend API.
+  - **Push Notifications:** Firebase Cloud Messaging (FCM) or Web Push API (compatible with mobile webviews).
+- **Frontend:** Single-Page HTML5, Vanilla JS (or HTMX/Alpine.js for simplicity), Tailwind CSS via CDN or local build.
+- **Mobile Wrapper:** CapacitorJS (to target Android APK output).
+
+---
+
+## 🗂 Architecture Design & Flow
+1. **Scraper Service:** Runs periodically -> calls Flight API -> parses response.
+2. **Analysis Engine:** Compares current price against `lowest_historical_price` or `target_price` in SQLite.
+3. **Trigger:** If price drops, fires asynchronous tasks to send Email + Push Notification via FCM.
+4. **API Layer:** FastAPI exposes endpoints for the mobile frontend to add/remove tracked routes, view history, and register FCM tokens.
+
+---
+
+## 🤖 CURSOR AGENT PROMPT - COPY & PASTE START
+
+Act as an expert Senior Full-Stack Developer and Mobile Engineer. We are building the **Flight Price Tracker** application following a strict, step-by-step modular strategy. 
+
+Every Python file must include professional docstrings, type hinting, and strict error handling. The frontend must be an ultra-minimalist, premium-feeling SPA with generous whitespace, crisp typography, and dark mode support.
+
+### Step-by-Step Implementation Strategy
+You must execute these steps sequentially. Stop and ask for confirmation after completing each step.
+
+#### 🟥 STEP 1: Project Structure & Database Layer
+- Set up the project layout separating `backend/` and `frontend/`.
+- Create `backend/requirements.txt` with `fastapi`, `uvicorn`, `sqlmodel`, `apscheduler`, `requests`, `pydantic-settings`.
+- Implement `backend/database.py` and `backend/models.py`. 
+- Database Schema required:
+  - `TrackedRoute`: id, departure_city, destination_city, departure_date, return_date, target_price, active, created_at.
+  - `PriceHistory`: id, route_id, price, checked_at.
+  - `UserDevice`: id, fcm_token, email, created_at.
+
+#### 🟨 STEP 2: Mock & Real Flight API Client
+- Create `backend/services/flight_api.py`.
+- Implement a `FlightAPIClient` class that interfaces with Skyscanner (RapidAPI) or Google Flights (SerpApi).
+- **Crucial:** Implement a toggleable `MockFlightAPIClient` that returns realistic, slightly fluctuating random prices so we can develop offline without hitting API rate limits.
+
+#### 🟩 STEP 3: Automation Scheduler & Price Drop Logic
+- Create `backend/services/scheduler.py` using `apscheduler`.
+- Configure a cron job running 3 times a day.
+- Implement the core comparison logic: Fetch current price -> query DB for lowest history -> if lower, log it and prepare payload for notification.
+
+#### 🟦 STEP 4: Email & Firebase Push Notification Services
+- Create `backend/services/notification.py`.
+- Implement an Email service (via standard `smtplib` or a modern alternative like `resend`).
+- Implement Android Push Notifications via Firebase Cloud Messaging (FCM) Admin SDK, accepting a device token stored in the database.
+
+#### 🟪 STEP 5: FastAPI REST Endpoints
+- Implement `backend/main.py` with CORS enabled.
+- Endpoints needed:
+  - `POST /api/tracks` & `GET /api/tracks` & `DELETE /api/tracks/{id}`
+  - `GET /api/tracks/{id}/history`
+  - `POST /api/devices/register` (stores FCM tokens and user emails).
+
+#### 🎛 STEP 6: Ultra-Minimalist Frontend (SPA)
+- Inside `frontend/`, create a single `index.html` and `app.js` styled with Tailwind CSS.
+- **Design Guidelines:** Minimalist, clean dashboard layout, premium dark-slate/white aesthetic, smooth element fades, zero clutter.
+- Features: View active tracks with a small line-chart/sparkline of history, "Add Route" modal, and an "Email/Notification Settings" section.
+
+#### 🤖 STEP 7: Mobile APK Wrapper Preparation (CapacitorJS)
+- Initialize Capacitor inside the `frontend/` directory (`npm init @capacitor/app`).
+- Configure `capacitor.config.json` to point to the web asset directory.
+- Add the Android platform (`npm install @capacitor/android`, `npx cap add android`).
+- Provide clear instructions on how to handle the local FastAPI backend base URL connection from an Android Emulator or physical device (e.g., using `10.0.2.2` or local IP).
+
+---
+
+Let's begin with **STEP 1**. Please generate the project directory structure, `requirements.txt`, and the full SQLModel database layer code now.
+
+## 🤖 CURSOR AGENT PROMPT - COPY & PASTE END

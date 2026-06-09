@@ -1,0 +1,12 @@
+{
+  "appId": "com.flighttracker.app",
+  "appName": "Flight Tracker",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": true
+  },
+  "server": {
+    "cleartext": true,
+    "androidScheme": "https"
+  }
+}

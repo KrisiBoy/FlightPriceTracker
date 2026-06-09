@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full antialiased">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Flight Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body class="h-full bg-slate-950 text-slate-100 font-sans selection:bg-slate-700">
+
+  <!-- Auth -->
+  <div id="auth-screen" class="hidden min-h-full flex flex-col max-w-lg mx-auto px-5 py-16 justify-center">
+    <div class="fade-in">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500 mb-2">Price alerts</p>
+      <h1 class="text-3xl font-semibold tracking-tight text-white">Flight Tracker</h1>
+      <p class="text-slate-400 text-sm mt-2 font-light mb-8">Sign in to track routes and get drop alerts.</p>
+
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs text-slate-500 block mb-1.5" for="auth-email">Email</label>
+          <input id="auth-email" type="email" required autocomplete="email"
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-slate-500" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 block mb-1.5" for="auth-password">Password</label>
+          <input id="auth-password" type="password" required minlength="8" autocomplete="current-password"
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-slate-500" />
+        </div>
+        <p id="auth-error" class="hidden text-xs text-red-400"></p>
+        <button id="btn-auth-login" type="button"
+          class="w-full text-sm font-medium text-slate-950 bg-white hover:bg-slate-100 rounded-xl py-3.5 transition">
+          Sign in
+        </button>
+        <button id="btn-auth-register" type="button"
+          class="w-full text-sm font-medium bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl py-3 transition">
+          Create account
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="app" class="min-h-full flex flex-col max-w-lg mx-auto px-5 pb-28 pt-safe">
+
+    <!-- Header -->
+    <header class="pt-8 pb-10 fade-in relative">
+      <button id="btn-settings" type="button" aria-label="Settings"
+        class="absolute top-8 right-0 w-10 h-10 flex items-center justify-center rounded-full border border-slate-800 bg-slate-850/60 text-slate-400 hover:text-white hover:border-slate-600 transition">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+      </button>
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500 mb-2">Price alerts</p>
+      <h1 class="text-3xl font-semibold tracking-tight text-white">Flight Tracker</h1>
+      <p id="user-email" class="text-slate-400 text-sm mt-2 font-light">Watch routes. Get notified on drops.</p>
+    </header>
+
+    <!-- Tracks -->
+    <section class="flex-1 fade-in" style="animation-delay: 0.05s">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-sm font-medium text-slate-300">Your routes</h2>
+        <div class="flex items-center gap-2">
+          <button id="btn-refresh" type="button"
+            class="text-xs font-medium text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white px-3 py-2 rounded-full transition">
+            Refresh now
+          </button>
+          <button id="btn-add" type="button"
+            class="text-xs font-medium text-slate-950 bg-white hover:bg-slate-100 px-4 py-2 rounded-full transition">
+            + Add route
+          </button>
+        </div>
+      </div>
+      <p id="refresh-status" class="hidden text-xs text-center mb-4"></p>
+      <div id="tracks-list" class="space-y-4"></div>
+      <p id="tracks-empty" class="hidden text-center text-slate-500 text-sm py-16 font-light">
+        No routes yet. Tap <span class="text-slate-300">Add route</span> to start tracking.
+      </p>
+    </section>
+
+    <p id="global-error" class="hidden mt-6 text-center text-xs text-red-400"></p>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 modal-backdrop bg-slate-950/70">
+    <div class="w-full max-w-lg bg-slate-850 border border-slate-700 rounded-2xl p-6 shadow-2xl fade-in">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-lg font-medium text-white">Settings</h3>
+        <button id="settings-modal-close" type="button" class="text-slate-500 hover:text-slate-300 text-xl leading-none">&times;</button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs text-slate-500 block mb-1.5" for="settings-email">Email for alerts</label>
+          <input id="settings-email" type="email" placeholder="you@example.com"
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-slate-500 transition" />
+        </div>
+        <div id="settings-api-wrap">
+          <label class="text-xs text-slate-500 block mb-1.5" for="settings-api">API base URL (dev)</label>
+          <input id="settings-api" type="url" placeholder="http://10.0.2.2:8000/api"
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-slate-500 transition" />
+        </div>
+        <button id="btn-save-settings" type="button"
+          class="w-full text-sm font-medium bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl py-3 transition">
+          Save settings
+        </button>
+        <button id="btn-logout" type="button"
+          class="w-full text-sm font-medium text-red-300 border border-slate-700 hover:border-red-400/50 rounded-xl py-3 transition">
+          Sign out
+        </button>
+        <p id="settings-status" class="text-xs text-slate-500 text-center hidden"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Route Modal -->
+  <div id="modal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 modal-backdrop bg-slate-950/70">
+    <div class="w-full max-w-lg bg-slate-850 border border-slate-700 rounded-2xl p-6 shadow-2xl fade-in">
+      <div class="flex items-center justify-between mb-6">
+        <h3 id="modal-title" class="text-lg font-medium text-white">Track a route</h3>
+        <button id="modal-close" type="button" class="text-slate-500 hover:text-slate-300 text-xl leading-none">&times;</button>
+      </div>
+      <form id="form-add" class="space-y-4">
+        <input type="hidden" id="track-id" value="" />
+        <div class="grid grid-cols-2 gap-3">
+          <div class="relative">
+            <label class="text-xs text-slate-500 block mb-1.5" for="departure">From</label>
+            <input id="departure" required placeholder="JFK or Budapest" maxlength="100" autocomplete="off"
+              role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="departure-suggestions"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm uppercase focus:outline-none focus:border-slate-500" />
+            <ul id="departure-suggestions" role="listbox"
+              class="airport-suggestions hidden absolute z-20 left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-xl overflow-hidden"></ul>
+          </div>
+          <div class="relative">
+            <label class="text-xs text-slate-500 block mb-1.5" for="destination">To</label>
+            <input id="destination" required placeholder="LHR or Hungary" maxlength="100" autocomplete="off"
+              role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="destination-suggestions"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm uppercase focus:outline-none focus:border-slate-500" />
+            <ul id="destination-suggestions" role="listbox"
+              class="airport-suggestions hidden absolute z-20 left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-xl overflow-hidden"></ul>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-slate-500 block mb-1.5" for="departure-date">Depart</label>
+            <input id="departure-date" type="date" required
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-slate-500" />
+          </div>
+          <div>
+            <label class="text-xs text-slate-500 block mb-1.5" for="return-date">Return <span class="text-slate-600">(opt)</span></label>
+            <input id="return-date" type="date"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-slate-500" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-slate-500 block mb-1.5" for="target-price">Target price <span class="text-slate-600">(opt)</span></label>
+            <input id="target-price" type="number" min="0" step="1" placeholder="450"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-slate-500" />
+          </div>
+          <div>
+            <label class="text-xs text-slate-500 block mb-1.5" for="currency">Currency</label>
+            <select id="currency"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-slate-500"></select>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 block mb-1.5" for="stops">Stops</label>
+          <select id="stops"
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-slate-500">
+            <option value="any">Any</option>
+            <option value="direct">Direct only</option>
+            <option value="connecting">With layover</option>
+          </select>
+        </div>
+        <p id="form-error" class="hidden text-xs text-red-400"></p>
+        <button id="form-submit" type="submit"
+          class="w-full mt-2 text-sm font-medium text-slate-950 bg-white hover:bg-slate-100 rounded-xl py-3.5 transition">
+          Start tracking
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>

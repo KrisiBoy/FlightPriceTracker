@@ -1,0 +1,166 @@
+Flight Tracker — Android APK & Mobile App Guide
+==============================================
+
+This app is a Capacitor wrapper around the Vite-built SPA. The APK runs
+the UI on-device; the Python FastAPI backend must be reachable over the
+network (local PC, LAN, or deployed server).
+
+
+PHASE 1 — Install build tools (one-time)
+----------------------------------------
+1. Install Node.js 20+ (already used for frontend builds).
+
+2. Install Android Studio (latest stable):
+   https://developer.android.com/studio
+
+3. In Android Studio → SDK Manager, install:
+   - Android SDK Platform 34 (or latest)
+   - Android SDK Build-Tools
+   - Android SDK Platform-Tools
+
+4. Set environment variables (Windows PowerShell, adjust paths if needed):
+
+   [System.Environment]::SetEnvironmentVariable(
+     "JAVA_HOME",
+     "C:\Program Files\Android\Android Studio\jbr",
+     "User"
+   )
+   [System.Environment]::SetEnvironmentVariable(
+     "ANDROID_HOME",
+     "$env:LOCALAPPDATA\Android\Sdk",
+     "User"
+   )
+
+   Add to PATH (User):
+   %JAVA_HOME%\bin
+   %ANDROID_HOME%\platform-tools
+
+5. Restart the terminal, then verify:
+
+   java -version
+   adb version
+
+6. Install frontend dependencies:
+
+   cd frontend
+   npm install
+
+
+PHASE 2 — Build the debug APK
+-----------------------------
+From the project root:
+
+   cd frontend
+   npm run cap:apk
+
+Output APK:
+   frontend/android/app/build/outputs/apk/debug/app-debug.apk
+
+Alternative (Android Studio GUI):
+   npm run cap:sync
+   npm run cap:open
+   Build → Build Bundle(s) / APK(s) → Build APK(s)
+
+Install on a connected phone (USB debugging enabled):
+
+   adb install -r frontend/android/app/build/outputs/apk/debug/app-debug.apk
+
+
+PHASE 3 — Run backend so the app can load data
+----------------------------------------------
+The mobile app does NOT bundle the Python server. Start it separately:
+
+   cd backend
+   .venv\Scripts\activate
+   uvicorn main:app --host 0.0.0.0 --port 8000
+
+Keep this running while testing.
+
+
+PHASE 4 — Point the app at your backend
+---------------------------------------
+Open the app → gear icon (Notifications) → API base URL.
+
+Emulator (Android Studio AVD):
+   http://10.0.2.2:8000/api
+
+Physical phone on same Wi-Fi as your PC:
+   1. Find PC IP:  ipconfig   → e.g. 192.168.1.42
+   2. Backend must use --host 0.0.0.0 (see Phase 3)
+   3. API URL:    http://192.168.1.42:8000/api
+   4. Allow port 8000 through Windows Firewall if needed
+
+Production / internet:
+   Deploy FastAPI behind HTTPS, then set:
+   https://your-api.example.com/api
+
+Tap "Save notification settings", then add a route or tap "Refresh now".
+
+
+PHASE 5 — Verify the app works end-to-end
+-----------------------------------------
+Checklist:
+  [ ] App opens (no white screen)
+  [ ] Settings → API URL saved without error
+  [ ] "Your routes" loads (or shows empty state)
+  [ ] Add route → appears on list
+  [ ] Refresh now → price updates
+  [ ] Book flight → opens browser with booking link
+
+If "Failed to load routes":
+  - Wrong API URL
+  - Backend not running or not reachable from phone
+  - Firewall blocking port 8000
+  - Re-run: node scripts/patch-android-network.js (allows HTTP)
+
+
+PHASE 6 — Release APK (optional, for sharing)
+---------------------------------------------
+1. Android Studio → Build → Generate Signed Bundle / APK
+2. Create a keystore (keep it safe)
+3. Choose APK, release build type
+4. Output:
+   frontend/android/app/build/outputs/apk/release/app-release.apk
+
+For Play Store you typically upload an AAB (App Bundle), not APK.
+
+
+PHASE 7 — Production mobile app (recommended path)
+--------------------------------------------------
+To make this a real always-on mobile product:
+
+1. Deploy backend
+   - Host FastAPI on Railway, Fly.io, Render, VPS, etc.
+   - Use HTTPS (required for production; cleartext HTTP is dev-only)
+   - Set FLIGHT_API_MODE and API keys in server .env
+
+2. Set default API URL in the app (optional)
+   - Edit frontend/app.js → getDefaultApiBase() for Capacitor
+   - Or ship with your production URL pre-filled in settings
+
+3. Push notifications (optional)
+   - Firebase project → add Android app (com.flighttracker.app)
+   - Download google-services.json → frontend/android/app/
+   - Set FCM_CREDENTIALS_PATH in backend .env
+   - Wire native FCM token registration (placeholder exists today)
+
+4. Rebuild after every frontend change:
+   npm run cap:apk
+
+
+Quick reference — commands
+--------------------------
+  npm run build          # web only
+  npm run cap:sync       # build + copy to android/
+  npm run cap:apk        # full debug APK build
+  npm run cap:open       # open Android Studio
+  npm run cap:run        # sync + run on device/emulator
+
+Troubleshooting
+---------------
+  JAVA_HOME is not set     → install Android Studio, set JAVA_HOME (Phase 1)
+  SDK location not found   → create frontend/android/local.properties:
+                             sdk.dir=C\:\\Users\\YOU\\AppData\\Local\\Android\\Sdk
+  White screen             → run npm run build before cap:sync
+  Cleartext HTTP blocked   → node scripts/patch-android-network.js
+  Gradle sync failed       → open Android Studio, install suggested SDK packages
