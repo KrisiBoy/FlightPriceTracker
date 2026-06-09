@@ -38,6 +38,12 @@ ${domainBlock}    <base-config cleartextTrafficPermitted="false" />
 fs.writeFileSync(networkConfigPath, networkConfig);
 
 let manifest = fs.readFileSync(manifestPath, 'utf8');
+if (!manifest.includes('xmlns:tools')) {
+  manifest = manifest.replace(
+    '<manifest xmlns:android="http://schemas.android.com/apk/res/android">',
+    '<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">',
+  );
+}
 manifest = manifest.replace(/android:usesCleartextTraffic="true"/g, 'android:usesCleartextTraffic="false"');
 if (!manifest.includes('networkSecurityConfig')) {
   manifest = manifest.replace(
@@ -45,5 +51,28 @@ if (!manifest.includes('networkSecurityConfig')) {
     '<application$1 android:usesCleartextTraffic="false" android:networkSecurityConfig="@xml/network_security_config">',
   );
 }
+if (!manifest.includes('tools:replace="android:usesCleartextTraffic"')) {
+  manifest = manifest.replace(
+    /<application([^>]*)>/,
+    '<application tools:replace="android:usesCleartextTraffic"$1>',
+  );
+}
 fs.writeFileSync(manifestPath, manifest);
+
+const buildGradlePath = path.join(androidRoot, 'app', 'build.gradle');
+if (fs.existsSync(buildGradlePath)) {
+  let buildGradle = fs.readFileSync(buildGradlePath, 'utf8');
+  if (!buildGradle.includes('signingConfig signingConfigs.debug')) {
+    buildGradle = buildGradle.replace(
+      /release \{\s*\n\s*minifyEnabled false/,
+      'release {\n            minifyEnabled false',
+    );
+    buildGradle = buildGradle.replace(
+      /(release \{\s*\n\s*minifyEnabled false[\s\S]*?proguard-rules\.pro'\s*)/,
+      "$1\n            signingConfig signingConfigs.debug",
+    );
+    fs.writeFileSync(buildGradlePath, buildGradle);
+  }
+}
+
 console.log('Applied production HTTPS-only Android network config.');

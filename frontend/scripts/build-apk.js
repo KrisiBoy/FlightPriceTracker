@@ -13,15 +13,17 @@ const androidRoot = path.join(frontendRoot, 'android');
 const gradlew = path.join(androidRoot, process.platform === 'win32' ? 'gradlew.bat' : 'gradlew');
 const isRelease = process.argv.includes('--release');
 const gradleTask = isRelease ? 'assembleRelease' : 'assembleDebug';
-const apkPath = path.join(
+const apkDir = path.join(
   androidRoot,
   'app',
   'build',
   'outputs',
   'apk',
   isRelease ? 'release' : 'debug',
-  isRelease ? 'app-release.apk' : 'app-debug.apk',
 );
+const apkCandidates = isRelease
+  ? ['app-release.apk', 'app-release-unsigned.apk']
+  : ['app-debug.apk'];
 
 function run(command, args, cwd) {
   const result = spawnSync(command, args, { cwd, stdio: 'inherit', shell: process.platform === 'win32' });
@@ -49,7 +51,11 @@ if (isRelease) {
 console.log(`3/3 Building ${isRelease ? 'release' : 'debug'} APK...`);
 run(gradlew, [gradleTask, '--no-daemon'], androidRoot);
 
-if (fs.existsSync(apkPath)) {
+const apkPath = apkCandidates
+  .map((name) => path.join(apkDir, name))
+  .find((candidate) => fs.existsSync(candidate));
+
+if (apkPath) {
   console.log('\nAPK ready:');
   console.log(apkPath);
 } else {
