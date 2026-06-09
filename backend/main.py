@@ -30,6 +30,7 @@ from schemas import (
     CurrencyList,
     DeviceRead,
     DeviceRegister,
+    NotificationPreferencesUpdate,
     PriceHistoryRead,
     RefreshResult,
     StopsList,
@@ -197,6 +198,26 @@ def login_user(payload: UserLogin, session: SessionDep) -> TokenRead:
 @app.get("/api/auth/me", response_model=UserRead)
 def get_me(current_user: CurrentUser) -> UserRead:
     """Return the authenticated user's profile."""
+    return UserRead.model_validate(current_user)
+
+
+@app.put("/api/auth/notifications", response_model=UserRead)
+def update_notification_preferences(
+    payload: NotificationPreferencesUpdate,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> UserRead:
+    """Update email/push notification preferences for the authenticated user."""
+    if payload.email_notifications_enabled is not None:
+        current_user.email_notifications_enabled = payload.email_notifications_enabled
+    if payload.push_notifications_enabled is not None:
+        current_user.push_notifications_enabled = payload.push_notifications_enabled
+    if payload.alert_email is not None:
+        current_user.alert_email = payload.alert_email
+
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
     return UserRead.model_validate(current_user)
 
 

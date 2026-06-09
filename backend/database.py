@@ -58,6 +58,9 @@ def migrate_db() -> None:
         ("price_history", "source", "VARCHAR(50)"),
         ("price_history", "stops_count", "INTEGER"),
         ("user_device", "user_id", "INTEGER"),
+        ("user", "alert_email", "VARCHAR(255)"),
+        ("user", "email_notifications_enabled", "BOOLEAN DEFAULT TRUE"),
+        ("user", "push_notifications_enabled", "BOOLEAN DEFAULT TRUE"),
     ]
 
     with engine.begin() as conn:

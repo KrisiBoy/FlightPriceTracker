@@ -88,17 +88,27 @@ Prices are indicative — always confirm on the airline or agency site before pa
 
 ## 5. Notifications
 
+Open **Settings** (gear icon) to control alerts separately:
+
+| Setting | What it does |
+|---------|----------------|
+| **Email alerts** | Sends price-drop emails to your alert address |
+| **Push alerts** | Sends instant notifications on Android |
+| **Email for alerts** | Destination inbox (defaults to your account email) |
+
+Both channels are **on by default**. Turn either off without affecting the other.
+
 ### Android (push)
 
 1. Use a release APK built with Firebase configured (`google-services.json` on the build machine).
 2. After sign-in, allow **notifications** when prompted.
-3. The app registers your device with the server. Price-drop pushes are sent via Firebase Cloud Messaging.
+3. Keep **Push alerts** enabled in Settings. The app registers your device with the server.
 
-If you deny permission, you can still use the app; only push is disabled.
+If you deny OS permission, you can still use the app; only push is disabled.
 
 ### Email
 
-If the server admin configured **Resend** or SMTP (`RESEND_API_KEY` or SMTP settings on Railway), you receive email when a price drops.
+If the server admin configured **Resend** or SMTP (`RESEND_API_KEY` or SMTP settings on Railway), you receive email when a price drops and **Email alerts** is on in Settings.
 
 ### iPhone / web
 

@@ -16,7 +16,7 @@ from sqlmodel import Session, select
 
 from config import Settings, get_settings
 from database import session_scope
-from models import UserDevice
+from models import User, UserDevice
 from services.scheduler import PriceDropAlert
 
 logger = logging.getLogger(__name__)
@@ -246,10 +246,11 @@ class NotificationService:
     def send_drop_alert(
         self,
         alert: PriceDropAlert,
+        user: User,
         devices: list[UserDevice],
         result: NotificationDispatchResult,
     ) -> None:
-        """Dispatch a single drop alert to all registered devices."""
+        """Dispatch a single drop alert according to the user's channel preferences."""
         if not self._settings.notifications_enabled:
             logger.info("Notifications disabled — skipping alert for route %s", alert.route_id)
             return
@@ -266,20 +267,22 @@ class NotificationService:
             "currency": alert.currency,
         }
 
-        emailed: set[str] = set()
-        for device in devices:
-            if device.email and device.email not in emailed and self._email_sender:
+        if user.email_notifications_enabled and self._email_sender:
+            to_email = (user.alert_email or user.email or "").strip()
+            if to_email:
                 try:
-                    self._email_sender.send(device.email, subject, plain, html)
+                    self._email_sender.send(to_email, subject, plain, html)
                     result.emails_sent += 1
-                    emailed.add(device.email)
-                    logger.info("Email sent to %s for route %s", device.email, alert.route_id)
+                    logger.info("Email sent to %s for route %s", to_email, alert.route_id)
                 except NotificationError as exc:
                     result.emails_failed += 1
                     result.errors.append(str(exc))
                     logger.error("%s", exc)
 
-            if device.fcm_token and self._push_sender:
+        if user.push_notifications_enabled and self._push_sender:
+            for device in devices:
+                if not device.fcm_token:
+                    continue
                 try:
                     self._push_sender.send(device.fcm_token, push_title, push_body, push_data)
                     result.pushes_sent += 1
@@ -297,15 +300,31 @@ class NotificationService:
 
         with session_scope() as session:
             for alert in alerts:
-                user_devices = self._get_registered_devices(session, alert.user_id)
-                if not user_devices:
+                user = session.get(User, alert.user_id)
+                if not user:
                     logger.warning(
-                        "No devices for user %s — skipping alert for route %s",
+                        "User %s not found — skipping alert for route %s",
                         alert.user_id,
                         alert.route_id,
                     )
                     continue
-                self.send_drop_alert(alert, user_devices, result)
+
+                user_devices = self._get_registered_devices(session, alert.user_id)
+                wants_email = user.email_notifications_enabled and bool(
+                    (user.alert_email or user.email or "").strip()
+                )
+                wants_push = user.push_notifications_enabled and any(
+                    device.fcm_token for device in user_devices
+                )
+                if not wants_email and not wants_push:
+                    logger.info(
+                        "Notifications disabled or no channels for user %s — skipping route %s",
+                        alert.user_id,
+                        alert.route_id,
+                    )
+                    continue
+
+                self.send_drop_alert(alert, user, user_devices, result)
 
         return result
 

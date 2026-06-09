@@ -45,9 +45,28 @@ class UserRead(BaseModel):
 
     id: int
     email: str
+    alert_email: Optional[str] = None
+    email_notifications_enabled: bool = True
+    push_notifications_enabled: bool = True
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class NotificationPreferencesUpdate(BaseModel):
+    """Update notification channel preferences for the current user."""
+
+    email_notifications_enabled: Optional[bool] = None
+    push_notifications_enabled: Optional[bool] = None
+    alert_email: Optional[str] = Field(default=None, max_length=255)
+
+    @field_validator("alert_email")
+    @classmethod
+    def normalize_alert_email(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        normalized = value.strip().lower()
+        return normalized or None
 
 
 class TrackCreate(BaseModel):

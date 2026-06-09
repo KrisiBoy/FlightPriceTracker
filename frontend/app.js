@@ -16,6 +16,18 @@ const MIN_PASSWORD_LENGTH = 8;
 
 /** @type {'login' | 'register'} */
 let authMode = 'login';
+
+/**
+ * @typedef {Object} UserProfile
+ * @property {number} id
+ * @property {string} email
+ * @property {string | null} [alert_email]
+ * @property {boolean} email_notifications_enabled
+ * @property {boolean} push_notifications_enabled
+ */
+
+/** @type {UserProfile | null} */
+let userProfile = null;
 const IS_PRODUCTION_BUILD = import.meta.env.PROD && Boolean(import.meta.env.VITE_API_BASE_URL);
 const PUSH_NOTIFICATIONS_ENABLED = import.meta.env.VITE_PUSH_NOTIFICATIONS_ENABLED === 'true';
 
@@ -315,8 +327,23 @@ function setDeviceToken(token) {
   if (token) localStorage.setItem(STORAGE_DEVICE_TOKEN, token);
 }
 
+function pushNotificationsAllowed() {
+  return Boolean(
+    PUSH_NOTIFICATIONS_ENABLED
+    && Capacitor.isNativePlatform()
+    && getAuthToken()
+    && (userProfile?.push_notifications_enabled ?? true),
+  );
+}
+
+function applyUserProfile(profile) {
+  userProfile = profile;
+  const alertEmail = profile.alert_email || profile.email || '';
+  if (alertEmail) localStorage.setItem(STORAGE_EMAIL, alertEmail);
+}
+
 async function initPushNotifications() {
-  if (!PUSH_NOTIFICATIONS_ENABLED || !Capacitor.isNativePlatform() || !getAuthToken()) return;
+  if (!pushNotificationsAllowed()) return;
 
   try {
     let perm = await PushNotifications.checkPermissions();
@@ -741,7 +768,25 @@ function openSettingsModal() {
   const apiField = document.getElementById('settings-api-wrap');
   if (apiField) apiField.classList.toggle('hidden', IS_PRODUCTION_BUILD);
   document.getElementById('settings-api').value = getApiBase();
-  document.getElementById('settings-email').value = localStorage.getItem(STORAGE_EMAIL) || '';
+  document.getElementById('settings-email').value =
+    userProfile?.alert_email || localStorage.getItem(STORAGE_EMAIL) || userProfile?.email || '';
+  document.getElementById('settings-email-notifications').checked =
+    userProfile?.email_notifications_enabled ?? true;
+  document.getElementById('settings-push-notifications').checked =
+    userProfile?.push_notifications_enabled ?? true;
+
+  const pushHint = document.getElementById('settings-push-hint');
+  const pushToggle = document.getElementById('settings-push-notifications');
+  if (pushHint && pushToggle) {
+    if (!PUSH_NOTIFICATIONS_ENABLED || !Capacitor.isNativePlatform()) {
+      pushHint.textContent = 'Requires the Android app';
+      pushToggle.disabled = false;
+    } else {
+      pushHint.textContent = 'Instant alerts on Android';
+      pushToggle.disabled = false;
+    }
+  }
+
   document.getElementById('settings-status').classList.add('hidden');
   document.getElementById('settings-modal').classList.remove('hidden');
 }
@@ -753,13 +798,29 @@ function closeSettingsModal() {
 async function saveSettings() {
   const email = document.getElementById('settings-email').value.trim();
   const apiBase = document.getElementById('settings-api').value.trim();
+  const emailNotificationsEnabled = document.getElementById('settings-email-notifications').checked;
+  const pushNotificationsEnabled = document.getElementById('settings-push-notifications').checked;
   const status = document.getElementById('settings-status');
 
   if (apiBase) setApiBase(apiBase);
-  if (email) localStorage.setItem(STORAGE_EMAIL, email);
 
   try {
-    await registerDeviceForNotifications();
+    const updated = await api('/auth/notifications', {
+      method: 'PUT',
+      body: JSON.stringify({
+        email_notifications_enabled: emailNotificationsEnabled,
+        push_notifications_enabled: pushNotificationsEnabled,
+        alert_email: email || null,
+      }),
+    });
+    applyUserProfile(updated);
+    if (email) localStorage.setItem(STORAGE_EMAIL, email);
+
+    if (pushNotificationsAllowed()) {
+      await registerDeviceForNotifications();
+      await initPushNotifications();
+    }
+
     status.textContent = 'Settings saved';
     status.classList.remove('hidden', 'text-red-400');
     status.classList.add('text-green-400');
@@ -898,6 +959,7 @@ function bindEvents() {
 async function bootstrapApp() {
   await Promise.all([loadCurrencies(), loadStops()]);
   const me = await api('/auth/me');
+  applyUserProfile(me);
   const userLabel = document.getElementById('user-email');
   if (userLabel) userLabel.textContent = me.email;
   await initPushNotifications();

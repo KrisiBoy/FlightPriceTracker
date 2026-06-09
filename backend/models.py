@@ -22,6 +22,9 @@ class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     email: str = Field(unique=True, index=True, max_length=255)
     password_hash: str = Field(max_length=255)
+    alert_email: Optional[str] = Field(default=None, max_length=255)
+    email_notifications_enabled: bool = Field(default=True)
+    push_notifications_enabled: bool = Field(default=True)
     created_at: datetime = Field(default_factory=utc_now)
 
 

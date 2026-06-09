@@ -116,6 +116,36 @@ def main() -> None:
     assert push.sent[0][0] == "test-fcm-token-abc"
 
     print(f"Emails dispatched: {result.emails_sent}, pushes: {result.pushes_sent}")
+
+    with Session(engine) as session:
+        user = session.get(User, user_id)
+        assert user is not None
+        user.email_notifications_enabled = False
+        user.push_notifications_enabled = True
+        session.add(user)
+        session.commit()
+
+    email.sent.clear()
+    push.sent.clear()
+    result = service.dispatch_drop_alerts([alert])
+    assert result.emails_sent == 0
+    assert result.pushes_sent == 1
+
+    with Session(engine) as session:
+        user = session.get(User, user_id)
+        assert user is not None
+        user.email_notifications_enabled = True
+        user.push_notifications_enabled = False
+        session.add(user)
+        session.commit()
+
+    email.sent.clear()
+    push.sent.clear()
+    result = service.dispatch_drop_alerts([alert])
+    assert result.emails_sent == 1
+    assert result.pushes_sent == 0
+
+    print("Channel preference filtering OK")
     print("OK")
 
 
