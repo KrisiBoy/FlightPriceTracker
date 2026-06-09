@@ -18,6 +18,7 @@ venv/
 firebase-*.json
 google-services.json
 **/fcm*.json
+flight-price-tracker-*.json
 
 # Node / Capacitor (Step 7)
 node_modules/

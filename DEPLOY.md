@@ -44,7 +44,7 @@ APP_ENV=production
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 JWT_SECRET=<generate-a-long-random-string>
 JWT_EXPIRE_HOURS=168
-FLIGHT_API_MODE=mock
+FLIGHT_API_MODE=live
 RAPIDAPI_KEY=
 SERPAPI_KEY=
 CORS_ORIGINS=*
@@ -57,7 +57,9 @@ SCHEDULER_HOURS=8,14,20
 
 **PostgreSQL URL:** Railway provides `DATABASE_URL` as `postgresql://...`. SQLAlchemy + psycopg3 accept this format. If needed, prefix with `postgresql+psycopg://` (same connection string after the scheme).
 
-**Real prices:** Set `RAPIDAPI_KEY` and/or `SERPAPI_KEY`. When keys exist, the aggregator uses real providers; otherwise mock providers are used.
+**Real prices:** Set `RAPIDAPI_KEY` and/or `SERPAPI_KEY` and use `FLIGHT_API_MODE=live` (not `mock`). If mode is `mock`, keys are ignored. Without keys, mock providers are used.
+
+**Verify production:** `python backend/scripts/smoke_test_production.py` (set `PRODUCTION_URL` if needed).
 
 ## 5. Deploy
 
