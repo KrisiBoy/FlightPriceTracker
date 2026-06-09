@@ -59,7 +59,11 @@ SCHEDULER_HOURS=8,14,20
 
 **Real prices:** Set `RAPIDAPI_KEY` and/or `SERPAPI_KEY` and use `FLIGHT_API_MODE=live` (not `mock`). If mode is `mock`, keys are ignored. Without keys, mock providers are used.
 
+**Skyscanner:** Requires a RapidAPI subscription to [Skyscanner Flights](https://rapidapi.com/skyscanner/api/skyscanner-flights). The client resolves IATA codes to Skyscanner PlaceIds automatically.
+
 **Verify production:** `python backend/scripts/smoke_test_production.py` (set `PRODUCTION_URL` if needed).
+
+**Verify Skyscanner locally:** `python backend/scripts/smoke_test_skyscanner.py` (needs `RAPIDAPI_KEY` in `.env`).
 
 ## 5. Deploy
 

@@ -21,6 +21,18 @@ from stops import DEFAULT_STOPS, normalize_stops
 logger = logging.getLogger(__name__)
 DEFAULT_TIMEOUT_SECONDS = 30
 
+# Skyscanner browse-quotes expects market codes aligned with currency.
+CURRENCY_MARKET: dict[str, str] = {
+    "USD": "US",
+    "EUR": "DE",
+    "GBP": "UK",
+    "HUF": "HU",
+    "BGN": "BG",
+    "JPY": "JP",
+}
+
+_SKYSCANNER_PLACE_CACHE: dict[tuple[str, str, str, str, str], str] = {}
+
 
 class FlightAPIError(Exception):
     """Raised when a flight API request fails or returns unusable data."""
@@ -225,15 +237,18 @@ class SkyscannerRapidAPIClient(FlightAPIClient):
     """Skyscanner browse-quotes client via RapidAPI."""
 
     HOST = "skyscanner-skyscanner-flights-v1.p.rapidapi.com"
-    BASE_URL = f"https://{HOST}/apiservices/browsequotes/v1.0"
+    BROWSE_URL = f"https://{HOST}/apiservices/browsequotes/v1.0"
+    AUTOSUGGEST_URL = f"https://{HOST}/apiservices/autosuggest/v1.0"
 
-    def __init__(self, api_key: str, country: str = "US", locale: str = "en-US") -> None:
+    def __init__(self, api_key: str, locale: str = "en-US") -> None:
         if not api_key:
             raise FlightAPIError("RAPIDAPI_KEY is required for Skyscanner client.")
         self._api_key = api_key
-        self._country = country
-        self._currency = DEFAULT_CURRENCY
         self._locale = locale
+
+    @staticmethod
+    def _market_for_currency(currency: str) -> str:
+        return CURRENCY_MARKET.get(currency.upper(), "US")
 
     def _headers(self) -> dict[str, str]:
         return {
@@ -241,12 +256,18 @@ class SkyscannerRapidAPIClient(FlightAPIClient):
             "X-RapidAPI-Host": self.HOST,
         }
 
-    def _request(self, path: str) -> Response:
-        url = f"{self.BASE_URL}/{path}"
+    def _request(
+        self,
+        base_url: str,
+        path: str,
+        query_params: Optional[dict[str, str]] = None,
+    ) -> Response:
+        url = f"{base_url}/{path}"
         try:
             response = requests.get(
                 url,
                 headers=self._headers(),
+                params=query_params,
                 timeout=DEFAULT_TIMEOUT_SECONDS,
             )
             response.raise_for_status()
@@ -254,18 +275,61 @@ class SkyscannerRapidAPIClient(FlightAPIClient):
         except requests.RequestException as exc:
             raise FlightAPIError(f"Skyscanner request failed: {exc}") from exc
 
+    def _resolve_place_id(self, query: str, market: str, currency: str) -> str:
+        """Resolve an IATA/city code to a Skyscanner PlaceId (e.g. BUD-sky)."""
+        normalized = query.strip().upper()
+        cache_key = (self.HOST, market, currency, self._locale, normalized)
+        cached = _SKYSCANNER_PLACE_CACHE.get(cache_key)
+        if cached:
+            return cached
+
+        place_id: Optional[str] = None
+        try:
+            autosuggest_path = f"{market}/{currency}/{self._locale}/"
+            response = self._request(
+                self.AUTOSUGGEST_URL,
+                autosuggest_path,
+                query_params={"query": normalized},
+            )
+            places = response.json().get("Places") or []
+            chosen: Optional[dict[str, Any]] = None
+            for place in places:
+                iata = str(place.get("IataCode", "")).upper()
+                sky_code = str(place.get("SkyscannerCode", "")).upper()
+                if iata == normalized or sky_code == normalized:
+                    chosen = place
+                    break
+            if places:
+                place_id = str((chosen or places[0]).get("PlaceId") or "").strip() or None
+        except FlightAPIError as exc:
+            logger.debug("Skyscanner autosuggest failed for %s: %s", normalized, exc)
+
+        if not place_id and len(normalized) == 3 and normalized.isalpha():
+            # Common airport PlaceId pattern when autosuggest is unavailable.
+            place_id = f"{normalized}-sky"
+
+        if not place_id:
+            raise FlightAPIError(f"Skyscanner could not resolve place '{normalized}'.")
+
+        _SKYSCANNER_PLACE_CACHE[cache_key] = place_id
+        return place_id
+
     def get_quote(self, params: FlightSearchParams) -> FlightQuote:
         origin = params.departure_city.strip().upper()
         destination = params.destination_city.strip().upper()
         outbound = params.departure_date.strftime("%Y-%m-%d")
-        inbound = params.return_date.strftime("%Y-%m-%d") if params.return_date else ""
 
         currency = params.currency.upper()
-        path = (
-            f"{self._country}/{currency}/{self._locale}/"
-            f"{origin}/{destination}/{outbound}/{inbound}"
-        )
-        response = self._request(path)
+        market = self._market_for_currency(currency)
+        origin_id = self._resolve_place_id(origin, market, currency)
+        destination_id = self._resolve_place_id(destination, market, currency)
+
+        browse_path = f"{market}/{currency}/{self._locale}/{origin_id}/{destination_id}/{outbound}"
+        query_params: Optional[dict[str, str]] = None
+        if params.return_date:
+            query_params = {"inboundpartialdate": params.return_date.strftime("%Y-%m-%d")}
+
+        response = self._request(self.BROWSE_URL, browse_path, query_params=query_params)
         payload = response.json()
         carriers = payload.get("Carriers", [])
         quotes = payload.get("Quotes", [])
