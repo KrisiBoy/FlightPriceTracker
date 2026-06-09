@@ -1,0 +1,37 @@
+Flight Tracker — iPhone without Apple Developer ($0)
+====================================================
+
+Installing a native iOS app on your own iPhone requires the paid Apple Developer
+Program ($99/year). If you do not want that cost, use the web app instead.
+
+RECOMMENDED: Add to Home Screen (PWA)
+-------------------------------------
+Your Railway deployment already serves the full app in the browser.
+
+1. On iPhone, open Safari:
+   https://flightpricetracker-production.up.railway.app
+2. Register or log in.
+3. Tap Share (square with arrow) → Add to Home Screen → Add.
+4. Open Flight Tracker from your home screen — it runs full-screen like an app.
+
+What works on iPhone (free)
+---------------------------
+- Login, routes, price refresh, booking links
+- Same Railway API as the Android APK
+- App icon on home screen (standalone mode)
+
+What does NOT work without a native iOS build
+-----------------------------------------------
+- Push notifications on iPhone (needs native app + Apple Developer + APNs)
+- Use email alerts from the backend scheduler instead, or use the Android APK
+  for push on Android.
+
+Android (free, full push)
+-------------------------
+See ANDROID_BUILD.txt — install the release APK on Android with push enabled.
+
+Optional later: native iOS ($99/year)
+--------------------------------------
+If you enroll in Apple Developer later, scripts in frontend/scripts/
+(build-ipa.js, patch-ios-production.js) and a Codemagic workflow can build an
+IPA for your device. That path is not required for day-to-day use.

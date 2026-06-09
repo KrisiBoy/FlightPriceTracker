@@ -4,7 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0f172a" />
+  <meta name="description" content="Track flight prices and get alerts when fares drop." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Flight Tracker" />
   <link rel="icon" type="image/png" href="./favicon.png" />
+  <link rel="apple-touch-icon" href="./icon.png" />
+  <link rel="manifest" href="./manifest.webmanifest" />
   <title>Flight Tracker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,28 +24,53 @@
       <img src="./icon.png" alt="" width="64" height="64" class="w-16 h-16 mb-4 rounded-2xl shadow-lg shadow-cyan-500/10" />
       <p class="text-xs uppercase tracking-[0.2em] text-slate-500 mb-2">Price alerts</p>
       <h1 class="text-3xl font-semibold tracking-tight text-white">Flight Tracker</h1>
-      <p class="text-slate-400 text-sm mt-2 font-light mb-8">Sign in to track routes and get drop alerts.</p>
+      <p id="auth-subtitle" class="text-slate-400 text-sm mt-2 font-light mb-6">Sign in with the email and password for your account.</p>
 
-      <div class="space-y-4">
+      <div role="tablist" aria-label="Account access"
+        class="flex rounded-xl bg-slate-900 border border-slate-800 p-1 mb-6">
+        <button id="auth-tab-login" type="button" role="tab" aria-selected="true" aria-controls="auth-form"
+          class="auth-tab flex-1 text-sm font-medium rounded-lg py-2.5 transition text-white bg-slate-800">
+          Sign in
+        </button>
+        <button id="auth-tab-register" type="button" role="tab" aria-selected="false" aria-controls="auth-form"
+          class="auth-tab flex-1 text-sm font-medium rounded-lg py-2.5 transition text-slate-400 hover:text-slate-200">
+          Create account
+        </button>
+      </div>
+
+      <div id="auth-form" class="space-y-4">
         <div>
-          <label class="text-xs text-slate-500 block mb-1.5" for="auth-email">Email</label>
-          <input id="auth-email" type="email" required autocomplete="email"
+          <label class="text-xs text-slate-500 block mb-1.5" for="auth-email">Email address</label>
+          <input id="auth-email" type="email" required autocomplete="email" placeholder="you@example.com"
             class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-slate-500" />
+          <p id="auth-email-hint" class="text-xs text-slate-500 mt-1.5">Use the same email you registered with.</p>
         </div>
         <div>
-          <label class="text-xs text-slate-500 block mb-1.5" for="auth-password">Password</label>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-xs text-slate-500" for="auth-password" id="auth-password-label">Your password</label>
+            <button id="btn-auth-toggle-password" type="button"
+              class="text-xs text-slate-500 hover:text-slate-300 transition">
+              Show
+            </button>
+          </div>
           <input id="auth-password" type="password" required minlength="8" autocomplete="current-password"
+            placeholder="Enter your account password"
             class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-slate-500" />
+          <p id="auth-password-hint" class="text-xs text-slate-500 mt-1.5">
+            Enter the password you chose when you created this account.
+          </p>
         </div>
         <p id="auth-error" class="hidden text-xs text-red-400"></p>
-        <button id="btn-auth-login" type="button"
+        <button id="btn-auth-submit" type="button"
           class="w-full text-sm font-medium text-slate-950 bg-white hover:bg-slate-100 rounded-xl py-3.5 transition">
           Sign in
         </button>
-        <button id="btn-auth-register" type="button"
-          class="w-full text-sm font-medium bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl py-3 transition">
-          Create account
-        </button>
+        <p id="auth-switch-hint" class="text-xs text-center text-slate-500">
+          <span id="auth-switch-prefix">New here?</span>
+          <button id="btn-auth-switch" type="button" class="text-slate-300 hover:text-white underline underline-offset-2">
+            <span id="auth-switch-action">Create an account</span>
+          </button>
+        </p>
       </div>
     </div>
   </div>
@@ -75,6 +106,18 @@
         </div>
       </div>
       <p id="refresh-status" class="hidden text-xs text-center mb-4"></p>
+      <div id="getting-started" class="hidden mb-5 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <h3 class="text-sm font-medium text-slate-200">Getting started</h3>
+          <button id="btn-dismiss-guide" type="button" aria-label="Dismiss guide"
+            class="text-slate-500 hover:text-slate-300 text-lg leading-none shrink-0">&times;</button>
+        </div>
+        <ol class="text-xs text-slate-400 space-y-2 list-decimal list-inside font-light">
+          <li>Tap <span class="text-slate-300">+ Add route</span> and pick airports, dates, and currency.</li>
+          <li>Tap <span class="text-slate-300">Refresh now</span> to fetch the latest price.</li>
+          <li>We check prices automatically 3× daily and alert you when fares drop.</li>
+        </ol>
+      </div>
       <div id="tracks-list" class="space-y-4"></div>
       <p id="tracks-empty" class="hidden text-center text-slate-500 text-sm py-16 font-light">
         No routes yet. Tap <span class="text-slate-300">Add route</span> to start tracking.

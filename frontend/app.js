@@ -11,6 +11,11 @@ const STORAGE_API = 'flightTrackerApiBase';
 const STORAGE_EMAIL = 'flightTrackerEmail';
 const STORAGE_DEVICE_TOKEN = 'flightTrackerDeviceToken';
 const STORAGE_TOKEN = 'flightTrackerAuthToken';
+const STORAGE_GUIDE_DISMISSED = 'flightTrackerGuideDismissed';
+const MIN_PASSWORD_LENGTH = 8;
+
+/** @type {'login' | 'register'} */
+let authMode = 'login';
 const IS_PRODUCTION_BUILD = import.meta.env.PROD && Boolean(import.meta.env.VITE_API_BASE_URL);
 const PUSH_NOTIFICATIONS_ENABLED = import.meta.env.VITE_PUSH_NOTIFICATIONS_ENABLED === 'true';
 
@@ -74,6 +79,106 @@ function clearAuthSession() {
 function showAuthScreen() {
   document.getElementById('auth-screen').classList.remove('hidden');
   document.getElementById('app').classList.add('hidden');
+  setAuthMode('login');
+}
+
+function setAuthTabStyles(isLogin) {
+  const loginTab = document.getElementById('auth-tab-login');
+  const registerTab = document.getElementById('auth-tab-register');
+  if (!loginTab || !registerTab) return;
+
+  loginTab.setAttribute('aria-selected', isLogin ? 'true' : 'false');
+  registerTab.setAttribute('aria-selected', isLogin ? 'false' : 'true');
+  loginTab.classList.toggle('text-white', isLogin);
+  loginTab.classList.toggle('bg-slate-800', isLogin);
+  loginTab.classList.toggle('text-slate-400', !isLogin);
+  registerTab.classList.toggle('text-white', !isLogin);
+  registerTab.classList.toggle('bg-slate-800', !isLogin);
+  registerTab.classList.toggle('text-slate-400', isLogin);
+}
+
+function setAuthMode(mode) {
+  authMode = mode;
+  const isLogin = mode === 'login';
+
+  setAuthTabStyles(isLogin);
+
+  const subtitle = document.getElementById('auth-subtitle');
+  if (subtitle) {
+    subtitle.textContent = isLogin
+      ? 'Sign in with the email and password for your account.'
+      : 'Create your account to start tracking routes and price drops.';
+  }
+
+  const emailHint = document.getElementById('auth-email-hint');
+  if (emailHint) {
+    emailHint.textContent = isLogin
+      ? 'Use the same email you registered with.'
+      : 'We use this email for your account and optional price-drop alerts.';
+  }
+
+  const passwordLabel = document.getElementById('auth-password-label');
+  if (passwordLabel) {
+    passwordLabel.textContent = isLogin ? 'Your password' : 'Choose a password';
+  }
+
+  const passwordHint = document.getElementById('auth-password-hint');
+  if (passwordHint) {
+    passwordHint.textContent = isLogin
+      ? 'Enter the password you chose when you created this account.'
+      : `Create a password with at least ${MIN_PASSWORD_LENGTH} characters. You will need it every time you sign in.`;
+  }
+
+  const passwordInput = document.getElementById('auth-password');
+  if (passwordInput) {
+    passwordInput.autocomplete = isLogin ? 'current-password' : 'new-password';
+    passwordInput.placeholder = isLogin
+      ? 'Enter your account password'
+      : `At least ${MIN_PASSWORD_LENGTH} characters`;
+    passwordInput.type = 'password';
+  }
+
+  const toggleBtn = document.getElementById('btn-auth-toggle-password');
+  if (toggleBtn) toggleBtn.textContent = 'Show';
+
+  const submitBtn = document.getElementById('btn-auth-submit');
+  if (submitBtn) submitBtn.textContent = isLogin ? 'Sign in' : 'Create account';
+
+  const switchPrefix = document.getElementById('auth-switch-prefix');
+  const switchAction = document.getElementById('auth-switch-action');
+  if (switchPrefix && switchAction) {
+    switchPrefix.textContent = isLogin ? 'New here? ' : 'Already have an account? ';
+    switchAction.textContent = isLogin ? 'Create an account' : 'Sign in';
+  }
+
+  document.getElementById('auth-error')?.classList.add('hidden');
+}
+
+function validateAuthForm(email, password) {
+  if (!email || !email.includes('@') || !email.includes('.')) {
+    return 'Enter a valid email address.';
+  }
+  if (!password) {
+    return authMode === 'login'
+      ? 'Enter your account password.'
+      : 'Choose a password for your new account.';
+  }
+  if (authMode === 'register' && password.length < MIN_PASSWORD_LENGTH) {
+    return `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
+  }
+  return null;
+}
+
+function updateGettingStarted(trackCount) {
+  const guide = document.getElementById('getting-started');
+  if (!guide) return;
+  const dismissed = localStorage.getItem(STORAGE_GUIDE_DISMISSED) === '1';
+  guide.classList.toggle('hidden', dismissed || trackCount > 0);
+}
+
+function dismissGettingStarted() {
+  localStorage.setItem(STORAGE_GUIDE_DISMISSED, '1');
+  document.getElementById('getting-started')?.classList.add('hidden');
 }
 
 function showAppScreen() {
@@ -408,9 +513,11 @@ async function loadTracks() {
 
     if (!tracks.length) {
       empty.classList.remove('hidden');
+      updateGettingStarted(0);
       return;
     }
     empty.classList.add('hidden');
+    updateGettingStarted(tracks.length);
 
     for (const track of tracks) {
       let history = [];
@@ -664,14 +771,21 @@ async function saveSettings() {
   }
 }
 
-async function handleAuthSubmit(mode) {
+async function handleAuthSubmit() {
   const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
   const errEl = document.getElementById('auth-error');
   errEl.classList.add('hidden');
 
+  const validationError = validateAuthForm(email, password);
+  if (validationError) {
+    errEl.textContent = validationError;
+    errEl.classList.remove('hidden');
+    return;
+  }
+
   try {
-    const path = mode === 'register' ? '/auth/register' : '/auth/login';
+    const path = authMode === 'register' ? '/auth/register' : '/auth/login';
     const data = await api(path, {
       method: 'POST',
       skipAuth: true,
@@ -690,8 +804,26 @@ async function handleAuthSubmit(mode) {
 function bindEvents() {
   initAirportAutocompletes();
 
-  document.getElementById('btn-auth-login').addEventListener('click', () => handleAuthSubmit('login'));
-  document.getElementById('btn-auth-register').addEventListener('click', () => handleAuthSubmit('register'));
+  document.getElementById('auth-tab-login').addEventListener('click', () => setAuthMode('login'));
+  document.getElementById('auth-tab-register').addEventListener('click', () => setAuthMode('register'));
+  document.getElementById('btn-auth-switch').addEventListener('click', () => {
+    setAuthMode(authMode === 'login' ? 'register' : 'login');
+  });
+  document.getElementById('btn-auth-submit').addEventListener('click', handleAuthSubmit);
+  document.getElementById('btn-auth-toggle-password').addEventListener('click', () => {
+    const input = document.getElementById('auth-password');
+    const btn = document.getElementById('btn-auth-toggle-password');
+    const reveal = input.type === 'password';
+    input.type = reveal ? 'text' : 'password';
+    btn.textContent = reveal ? 'Hide' : 'Show';
+  });
+  document.getElementById('btn-dismiss-guide').addEventListener('click', dismissGettingStarted);
+  document.getElementById('auth-form').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAuthSubmit();
+    }
+  });
   document.getElementById('btn-logout').addEventListener('click', logout);
   document.getElementById('btn-add').addEventListener('click', openModal);
   document.getElementById('btn-refresh').addEventListener('click', refreshNow);

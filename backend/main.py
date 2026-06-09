@@ -393,9 +393,21 @@ _frontend_dist = PROJECT_ROOT / "frontend" / "dist"
 _frontend_dir = _frontend_dist if _frontend_dist.is_dir() else PROJECT_ROOT / "frontend"
 _frontend_index = _frontend_dir / "index.html"
 _frontend_assets = _frontend_dir / "assets"
+_FRONTEND_ROOT_FILES = frozenset(
+    {"favicon.png", "icon.png", "manifest.webmanifest", "splash.png"}
+)
 
 if _frontend_assets.is_dir():
     app.mount("/assets", StaticFiles(directory=_frontend_assets), name="assets")
+
+
+def _frontend_root_file(name: str) -> FileResponse:
+    if name not in _FRONTEND_ROOT_FILES:
+        raise HTTPException(status_code=404, detail="Not found")
+    path = _frontend_dir / name
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(path)
 
 
 @app.get("/")
@@ -404,3 +416,18 @@ def serve_frontend_root() -> FileResponse:
     if not _frontend_index.is_file():
         raise HTTPException(status_code=404, detail="Frontend not built")
     return FileResponse(_frontend_index)
+
+
+@app.get("/favicon.png", include_in_schema=False)
+def serve_favicon() -> FileResponse:
+    return _frontend_root_file("favicon.png")
+
+
+@app.get("/icon.png", include_in_schema=False)
+def serve_icon() -> FileResponse:
+    return _frontend_root_file("icon.png")
+
+
+@app.get("/manifest.webmanifest", include_in_schema=False)
+def serve_manifest() -> FileResponse:
+    return _frontend_root_file("manifest.webmanifest")

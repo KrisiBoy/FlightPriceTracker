@@ -77,7 +77,19 @@ https://<your-service>.up.railway.app/api
 
 Health check: `GET /api/health`
 
-## 6. Mobile app build
+## 6. iPhone (no Apple Developer fee)
+
+Open Safari on your iPhone:
+
+```
+https://<your-service>.up.railway.app
+```
+
+Tap **Share → Add to Home Screen**. The app runs full-screen from your home screen (PWA). Push notifications are not available on iPhone without a paid Apple Developer account and a native build; use Android for push or rely on email alerts.
+
+See `frontend/IOS_BUILD.txt` for details.
+
+## 7. Mobile app build (Android APK)
 
 Set production API URL before building APK:
 
@@ -91,7 +103,7 @@ cd frontend
 npm run cap:apk
 ```
 
-## 7. Firebase push (optional)
+## 8. Firebase push (optional)
 
 1. Firebase Console → service account → generate private key (JSON)
 2. On Railway, set **`FCM_CREDENTIALS_JSON`** to the **entire Firebase JSON on one line** (must start with `{`)
@@ -100,7 +112,7 @@ npm run cap:apk
 3. Or set `FCM_CREDENTIALS_PATH` if you mount the JSON file in the container
 4. Add `google-services.json` to `frontend/android/app/` and rebuild APK (`npm run cap:apk:release`)
 
-## 8. Verify
+## 9. Verify
 
 - Register two users via the app — each sees only their routes
 - Scheduler runs on the server (check logs at UTC 8/14/20)
