@@ -9,6 +9,10 @@ Firebase Push Notifications Setup
    - Generate new private key (JSON)
 6. On your cloud server, set FCM_CREDENTIALS_PATH to that JSON file path
 7. Rebuild APK: npm run cap:apk:release
+   (build auto-enables push when google-services.json is present)
 
-The app requests push permission after sign-in and registers the FCM token
-with POST /api/devices/register (authenticated).
+Without google-services.json, push is disabled at build time so the app
+does not crash after the notification permission dialog.
+
+The app requests push permission after sign-in only when push is enabled,
+and registers the FCM token with POST /api/devices/register (authenticated).

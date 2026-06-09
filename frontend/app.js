@@ -12,6 +12,7 @@ const STORAGE_EMAIL = 'flightTrackerEmail';
 const STORAGE_DEVICE_TOKEN = 'flightTrackerDeviceToken';
 const STORAGE_TOKEN = 'flightTrackerAuthToken';
 const IS_PRODUCTION_BUILD = import.meta.env.PROD && Boolean(import.meta.env.VITE_API_BASE_URL);
+const PUSH_NOTIFICATIONS_ENABLED = import.meta.env.VITE_PUSH_NOTIFICATIONS_ENABLED === 'true';
 
 const CURRENCY_FORMAT = {
   USD: { symbol: '$', decimals: 2, position: 'before' },
@@ -210,34 +211,38 @@ function setDeviceToken(token) {
 }
 
 async function initPushNotifications() {
-  if (!Capacitor.isNativePlatform() || !getAuthToken()) return;
+  if (!PUSH_NOTIFICATIONS_ENABLED || !Capacitor.isNativePlatform() || !getAuthToken()) return;
 
-  let perm = await PushNotifications.checkPermissions();
-  if (perm.receive === 'prompt') {
-    perm = await PushNotifications.requestPermissions();
-  }
-  if (perm.receive !== 'granted') return;
-
-  await PushNotifications.removeAllListeners();
-  PushNotifications.addListener('registration', async (token) => {
-    setDeviceToken(token.value);
-    try {
-      await api('/devices/register', {
-        method: 'POST',
-        body: JSON.stringify({
-          fcm_token: token.value,
-          email: localStorage.getItem(STORAGE_EMAIL) || null,
-        }),
-      });
-    } catch (err) {
-      console.warn('Device registration failed:', err.message);
+  try {
+    let perm = await PushNotifications.checkPermissions();
+    if (perm.receive === 'prompt') {
+      perm = await PushNotifications.requestPermissions();
     }
-  });
-  PushNotifications.addListener('registrationError', (err) => {
-    console.warn('Push registration error:', err);
-  });
+    if (perm.receive !== 'granted') return;
 
-  await PushNotifications.register();
+    await PushNotifications.removeAllListeners();
+    PushNotifications.addListener('registration', async (token) => {
+      setDeviceToken(token.value);
+      try {
+        await api('/devices/register', {
+          method: 'POST',
+          body: JSON.stringify({
+            fcm_token: token.value,
+            email: localStorage.getItem(STORAGE_EMAIL) || null,
+          }),
+        });
+      } catch (err) {
+        console.warn('Device registration failed:', err.message);
+      }
+    });
+    PushNotifications.addListener('registrationError', (err) => {
+      console.warn('Push registration error:', err);
+    });
+
+    await PushNotifications.register();
+  } catch (err) {
+    console.warn('Push notifications unavailable:', err.message);
+  }
 }
 
 async function registerDeviceForNotifications() {

@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from_email: str = ""
     fcm_credentials_path: str = ""
+    fcm_credentials_json: str = ""
 
     @property
     def is_development(self) -> bool:

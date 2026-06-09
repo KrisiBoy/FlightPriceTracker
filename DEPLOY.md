@@ -93,9 +93,10 @@ npm run cap:apk
 
 ## 7. Firebase push (optional)
 
-1. Upload FCM service account JSON as a Railway secret file or variable
-2. Set `FCM_CREDENTIALS_PATH` to the mounted path
-3. Add `google-services.json` to `frontend/android/app/`
+1. Firebase Console → service account → generate private key (JSON)
+2. On Railway, set **`FCM_CREDENTIALS_JSON`** to the **entire JSON on one line** (must start with `{`)
+3. Or set `FCM_CREDENTIALS_PATH` if you mount the JSON file in the container
+4. Add `google-services.json` to `frontend/android/app/` and rebuild APK (`npm run cap:apk:release`)
 
 ## 8. Verify
 

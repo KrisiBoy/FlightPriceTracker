@@ -13,7 +13,12 @@ from services.flight_api import FlightSearchParams, SkyscannerRapidAPIClient
 def main() -> None:
     settings = get_settings()
     if not settings.rapidapi_key:
+        env_path = Path(__file__).resolve().parent.parent.parent / ".env"
         print("SKIP: RAPIDAPI_KEY not set")
+        print(f"Add your RapidAPI key to: {env_path}")
+        print("  RAPIDAPI_KEY=your-key-here")
+        print("Copy the value from Railway → web service → Variables, or RapidAPI dashboard.")
+        print("One-off test: $env:RAPIDAPI_KEY='your-key'; python scripts/smoke_test_skyscanner.py")
         return
 
     client = SkyscannerRapidAPIClient(api_key=settings.rapidapi_key)

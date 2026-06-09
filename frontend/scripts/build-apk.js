@@ -25,20 +25,32 @@ const apkCandidates = isRelease
   ? ['app-release.apk', 'app-release-unsigned.apk']
   : ['app-debug.apk'];
 
-function run(command, args, cwd) {
-  const result = spawnSync(command, args, { cwd, stdio: 'inherit', shell: process.platform === 'win32' });
+function run(command, args, cwd, env = process.env) {
+  const result = spawnSync(command, args, {
+    cwd,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+    env,
+  });
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
   }
 }
+
+const googleServicesPath = path.join(androidRoot, 'app', 'google-services.json');
+const pushEnabled = fs.existsSync(googleServicesPath);
+const buildEnv = {
+  ...process.env,
+  VITE_PUSH_NOTIFICATIONS_ENABLED: pushEnabled ? 'true' : 'false',
+};
 
 if (!fs.existsSync(gradlew)) {
   console.error('Android project not found. Run: npx cap add android');
   process.exit(1);
 }
 
-console.log('1/3 Syncing web assets to Android...');
-run('npm', ['run', 'build'], frontendRoot);
+console.log(`1/3 Syncing web assets to Android... (push notifications: ${pushEnabled ? 'enabled' : 'disabled'})`);
+run('npm', ['run', 'build'], frontendRoot, buildEnv);
 run('npx', ['cap', 'sync', 'android'], frontendRoot);
 
 console.log(`2/3 Applying ${isRelease ? 'production HTTPS' : 'dev HTTP'} network config...`);

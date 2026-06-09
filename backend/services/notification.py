@@ -175,14 +175,20 @@ class SMTPEmailSender(EmailSender):
 class FCMPushSender:
     """Send Android push notifications via Firebase Cloud Messaging."""
 
-    def __init__(self, credentials_path: str) -> None:
-        if not credentials_path:
-            raise NotificationError("FCM_CREDENTIALS_PATH is required for push notifications.")
-        path = Path(credentials_path)
-        if not path.is_file():
-            raise NotificationError(f"FCM credentials file not found: {credentials_path}")
-
-        self._credentials_path = str(path)
+    def __init__(self, credentials_path: Optional[str] = None, credentials_dict: Optional[dict] = None) -> None:
+        if credentials_dict is not None:
+            self._credentials_dict = credentials_dict
+            self._credentials_path = None
+        elif credentials_path:
+            path = Path(credentials_path)
+            if not path.is_file():
+                raise NotificationError(f"FCM credentials file not found: {credentials_path}")
+            self._credentials_path = str(path)
+            self._credentials_dict = None
+        else:
+            raise NotificationError(
+                "FCM credentials required: set FCM_CREDENTIALS_PATH or FCM_CREDENTIALS_JSON."
+            )
         self._initialized = False
 
     def _ensure_initialized(self) -> None:
@@ -192,7 +198,10 @@ class FCMPushSender:
         from firebase_admin import credentials
 
         if not firebase_admin._apps:
-            cred = credentials.Certificate(self._credentials_path)
+            if self._credentials_dict is not None:
+                cred = credentials.Certificate(self._credentials_dict)
+            else:
+                cred = credentials.Certificate(self._credentials_path)
             firebase_admin.initialize_app(cred)
         self._initialized = True
 
@@ -328,11 +337,34 @@ def get_email_sender(settings: Settings) -> Optional[EmailSender]:
     raise NotificationError(f"Unsupported EMAIL_PROVIDER: {settings.email_provider}")
 
 
+def _parse_fcm_credentials_json(raw: str) -> dict:
+    import json
+
+    text = raw.strip()
+    if not text:
+        raise NotificationError("FCM_CREDENTIALS_JSON is empty.")
+    if not text.startswith("{"):
+        text = "{" + text
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise NotificationError("FCM_CREDENTIALS_JSON is not valid JSON.") from exc
+    if not isinstance(payload, dict):
+        raise NotificationError("FCM_CREDENTIALS_JSON must be a JSON object.")
+    return payload
+
+
 def get_push_sender(settings: Settings) -> Optional[FCMPushSender]:
     """Build the FCM push sender, or None if credentials are not configured."""
-    if not settings.fcm_credentials_path:
-        return None
-    return FCMPushSender(settings.fcm_credentials_path)
+    if settings.fcm_credentials_json.strip():
+        try:
+            return FCMPushSender(credentials_dict=_parse_fcm_credentials_json(settings.fcm_credentials_json))
+        except NotificationError as exc:
+            logger.warning("FCM push disabled: %s", exc)
+            return None
+    if settings.fcm_credentials_path:
+        return FCMPushSender(credentials_path=settings.fcm_credentials_path)
+    return None
 
 
 def get_notification_service(settings: Optional[Settings] = None) -> NotificationService:

@@ -35,3 +35,6 @@ frontend/dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local deploy logs (may contain request data)
+Railway_log/
